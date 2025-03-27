@@ -1,0 +1,294 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Laravel Auth API",
+        "description": "Laravel Auth API documentation with Swagger",
+        "contact": {
+            "email": "admin@example.com"
+        },
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://127.0.0.1:9191",
+            "description": "Laravel Auth API"
+        },
+        {
+            "url": "http://127.0.0.1:9191"
+        }
+    ],
+    "paths": {
+        "/api/login": {
+            "get": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Get Falaq token",
+                "description": "Generate a base64 encoded token with nur muhammad abdul falaq prefix",
+                "operationId": "getFalaqToken",
+                "responses": {
+                    "200": {
+                        "description": "Token generated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "access_token": {
+                                            "type": "string",
+                                            "example": "WmFsYXFfMTcwOTg3NjU0Mw=="
+                                        },
+                                        "token_type": {
+                                            "type": "string",
+                                            "example": "bearer"
+                                        },
+                                        "expires_in": {
+                                            "type": "integer",
+                                            "example": 3600
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Login failed"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/deposit": {
+            "get": {
+                "tags": [
+                    "Deposit"
+                ],
+                "summary": "Get current amount",
+                "description": "Retrieve the current deposit amount",
+                "operationId": "getAmount",
+                "responses": {
+                    "200": {
+                        "description": "Amount retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "amount": {
+                                            "type": "number",
+                                            "example": 1000
+                                        },
+                                        "currency": {
+                                            "type": "string",
+                                            "example": "IDR"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "500": {
+                        "description": "Server error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Deposit"
+                ],
+                "summary": "Add amount",
+                "description": "Add money to the deposit amount",
+                "operationId": "addAmount",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "order_id",
+                                    "amount",
+                                    "timestamp"
+                                ],
+                                "properties": {
+                                    "order_id": {
+                                        "type": "string",
+                                        "example": "1234567890"
+                                    },
+                                    "amount": {
+                                        "type": "number",
+                                        "example": 1000
+                                    },
+                                    "timestamp": {
+                                        "type": "string",
+                                        "example": "2025-03-26 10:00:00"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Amount added successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Amount added successfully"
+                                        },
+                                        "amount": {
+                                            "type": "number",
+                                            "example": 2000
+                                        },
+                                        "order_id": {
+                                            "type": "string",
+                                            "example": "1234567890"
+                                        },
+                                        "status": {
+                                            "type": "number",
+                                            "example": 1
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    },
+                    "500": {
+                        "description": "Server error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/withdrawal": {
+            "post": {
+                "tags": [
+                    "Withdrawal"
+                ],
+                "summary": "Withdrawal amount",
+                "description": "Withdrawal amount from the deposit",
+                "operationId": "withdrawalAmount",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "amount"
+                                ],
+                                "properties": {
+                                    "amount": {
+                                        "type": "number",
+                                        "example": 1000
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Amount added successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Amount added successfully"
+                                        },
+                                        "amount": {
+                                            "type": "number",
+                                            "example": 2000
+                                        },
+                                        "new_amount": {
+                                            "type": "number",
+                                            "example": 1000
+                                        },
+                                        "status": {
+                                            "type": "number",
+                                            "example": 1
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    },
+                    "500": {
+                        "description": "Server error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "bearerFormat": "JWT",
+                "scheme": "bearer"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Authentication",
+            "description": "Authentication"
+        },
+        {
+            "name": "Deposit",
+            "description": "Deposit"
+        },
+        {
+            "name": "Withdrawal",
+            "description": "Withdrawal"
+        }
+    ]
+}
