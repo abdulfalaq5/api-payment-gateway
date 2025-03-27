@@ -21,9 +21,11 @@ Route::middleware(['web'])->prefix('api')->group(function () {
      * php artisan route:list --path=api
      * untuk melihat route yang ada
      */
+    Route::post('deposit/callback', [DepositController::class, 'callback']);
+    Route::get('deposit/generate-order-id', [DepositController::class, 'generateOrderId']);
+    Route::get('deposit/transaction-status/{order_id}', [DepositController::class, 'getTransactionStatus']);
     Route::middleware('name.token')->group(function () {
         Route::apiResource('deposit', DepositController::class);
-        Route::post('deposit/callback', [DepositController::class, 'callback']);
         Route::apiResource('withdrawal', WithdrawalController::class);
     });
     // Admin routes

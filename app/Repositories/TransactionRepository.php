@@ -23,6 +23,45 @@ class TransactionRepository
     const STATUS_PENDING = 1;
     const TYPE_DEPOSIT = 1;
     const TYPE_WITHDRAW = 2;
+
+    /**
+     * Generate unique order ID
+     * Format: INV/YYYYMMDD/XXXX
+     * 
+     * @return string
+     */
+    public function generateOrderId()
+    {
+        try {
+            $prefix = 'INV';
+            $date = now()->format('Ymdhis');
+            $random = str_pad(mt_rand(1, 9999), 4, '0', STR_PAD_LEFT);
+            $orderId = "{$prefix}-{$date}-{$random}";
+
+            // Check if order ID already exists, if yes, generate new one
+            while ($this->isOrderIdExists($orderId)) {
+                $random = str_pad(mt_rand(1, 9999), 4, '0', STR_PAD_LEFT);
+                $orderId = "{$prefix}-{$date}-{$random}";
+            }
+
+            return $orderId;
+        } catch (\Exception $e) {
+            Log::error('Error in generateOrderId: ' . $e->getMessage());
+            throw new \Exception('Failed to generate order ID');
+        }
+    }
+
+    /**
+     * Check if order ID already exists
+     * 
+     * @param string $orderId
+     * @return bool
+     */
+    private function isOrderIdExists($orderId)
+    {
+        return TransactionModel::where('order_id', $orderId)->exists();
+    }
+
     public function addDeposit($request, $snapToken = null)
     {
         try {

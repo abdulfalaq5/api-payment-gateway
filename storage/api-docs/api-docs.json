@@ -365,14 +365,271 @@
                 ],
                 "summary": "Midtrans payment callback",
                 "description": "Handle Midtrans payment notification",
-                "operationId": "cb42e60be35bb92fe0a384838591d3a5",
+                "operationId": "handleCallback",
                 "requestBody": {
-                    "description": "Midtrans notification payload",
-                    "required": true
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "transaction_status",
+                                    "order_id",
+                                    "status_code",
+                                    "gross_amount",
+                                    "signature_key"
+                                ],
+                                "properties": {
+                                    "transaction_status": {
+                                        "type": "string",
+                                        "example": "settlement"
+                                    },
+                                    "order_id": {
+                                        "type": "string",
+                                        "example": "INV/20250327/1234"
+                                    },
+                                    "status_code": {
+                                        "type": "string",
+                                        "example": "200"
+                                    },
+                                    "gross_amount": {
+                                        "type": "string",
+                                        "example": "100000.00"
+                                    },
+                                    "signature_key": {
+                                        "type": "string",
+                                        "example": "fe5f8ff281c4e3e65c1c4a7e2f48052579c3f0d9b64e44c87e2d9f2741149407622d13d1f8f27519500930dff9344367db064b01dacc31c9d0787cd0219c3825"
+                                    },
+                                    "payment_type": {
+                                        "type": "string",
+                                        "example": "bank_transfer"
+                                    },
+                                    "transaction_time": {
+                                        "type": "string",
+                                        "example": "2025-03-27 08:19:32"
+                                    },
+                                    "transaction_id": {
+                                        "type": "string",
+                                        "example": "9aed5972-5b6a-401d-950c-05f39184e8d3"
+                                    },
+                                    "status_message": {
+                                        "type": "string",
+                                        "example": "Success"
+                                    },
+                                    "merchant_id": {
+                                        "type": "string",
+                                        "example": "G12345678"
+                                    },
+                                    "fraud_status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "accept",
+                                            "deny",
+                                            "challenge"
+                                        ],
+                                        "example": "accept"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
                 },
                 "responses": {
                     "200": {
-                        "description": "Callback processed successfully"
+                        "description": "Notification processed successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Payment notification processed"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Invalid signature key",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Invalid signature key"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Failed to process payment notification"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/deposit/generate-order-id": {
+            "get": {
+                "tags": [
+                    "Deposit"
+                ],
+                "summary": "Generate order ID",
+                "description": "Generate a unique order ID",
+                "operationId": "generateOrderId",
+                "responses": {
+                    "200": {
+                        "description": "Order ID generated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Order ID generated successfully"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "order_id": {
+                                                    "type": "string",
+                                                    "example": "INV/20250327/1234"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Failed to generate order ID"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/deposit/transaction-status/{order_id}": {
+            "get": {
+                "tags": [
+                    "Deposit"
+                ],
+                "summary": "Check transaction status",
+                "description": "Check transaction status from Midtrans",
+                "operationId": "getTransactionStatus",
+                "parameters": [
+                    {
+                        "name": "order_id",
+                        "in": "path",
+                        "description": "Order ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "INV-20250327081932-5894"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Transaction status retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Transaction status retrieved successfully"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "transaction_status": {
+                                                    "type": "string",
+                                                    "example": "settlement"
+                                                },
+                                                "payment_type": {
+                                                    "type": "string",
+                                                    "example": "bank_transfer"
+                                                },
+                                                "order_id": {
+                                                    "type": "string",
+                                                    "example": "INV-20250327081932-5894"
+                                                },
+                                                "gross_amount": {
+                                                    "type": "string",
+                                                    "example": "100000.00"
+                                                },
+                                                "transaction_time": {
+                                                    "type": "string",
+                                                    "example": "2025-03-27 08:19:32"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Transaction not found"
+                    },
+                    "500": {
+                        "description": "Server error"
                     }
                 }
             }
