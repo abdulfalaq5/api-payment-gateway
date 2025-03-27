@@ -19,8 +19,8 @@ class TransactionRepository
         $this->transaction = $transaction;
     }
 
-    const STATUS_SUCCESS = 1;
-    const STATUS_PENDING = 2;
+    const STATUS_SUCCESS = 2;
+    const STATUS_PENDING = 1;
     const TYPE_DEPOSIT = 1;
     const TYPE_WITHDRAW = 2;
     public function addDeposit($request)

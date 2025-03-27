@@ -10,6 +10,7 @@ class StatusTransactionSeeder extends Seeder
 {
     /**
      * Run the database seeds.
+     * php artisan db:seed statusTransactionSeeder
      */
     public function run(): void
     {

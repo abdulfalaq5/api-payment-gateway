@@ -15,6 +15,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // Register JWT middleware
         $middleware->alias([
             'name.token' => \App\Http\Middleware\ValidateNameToken::class,
+            'jwt.auth' => JWTAuthMiddleware::class,
+            'jwt.refresh' => \Tymon\JWTAuth\Http\Middleware\RefreshToken::class
         ]);
 
         // Exclude API routes from CSRF verification
