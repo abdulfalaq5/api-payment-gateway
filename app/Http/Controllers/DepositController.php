@@ -18,10 +18,18 @@ class DepositController extends Controller
     use ApiResponse;
 
     protected $TransactionRepository;
+    protected $midtrans;
 
     public function __construct(TransactionRepository $TransactionRepository)
     {
         $this->TransactionRepository = $TransactionRepository;
+        
+        if (config('midtrans.use')) {
+            \Midtrans\Config::$serverKey = config('midtrans.server_key');
+            \Midtrans\Config::$isProduction = config('midtrans.is_production');
+            \Midtrans\Config::$isSanitized = config('midtrans.is_sanitized');
+            \Midtrans\Config::$is3ds = config('midtrans.is_3ds');
+        }
     }
 
     /**
@@ -106,27 +114,143 @@ class DepositController extends Controller
     {
         try {
             $request->validate([
-                'order_id' => 'required|string|max:255|regex:/^[a-zA-Z0-9\-_]+$/',
+                'order_id' => 'required|string|max:255|regex:/^[a-zA-Z0-9\-_]+$/|unique:transactions,order_id',
                 'amount' => 'required|numeric|min:0',
                 'timestamp' => 'required|date_format:Y-m-d H:i:s'
             ]);
+            $snapToken = null;
+            if (config('midtrans.use')) {
+                // Persiapkan parameter untuk Midtrans
+                $params = $this->prepareMidtransParameters($request);
 
-            $result = $this->TransactionRepository->addDeposit($request);
+                // Buat transaksi Snap Midtrans
+                $snapToken = \Midtrans\Snap::createTransaction($params)->token;
+            }
+
+            // Simpan data transaksi
+            $result = $this->TransactionRepository->addDeposit($request, $snapToken);
             
             if (!$result['success']) {
                 return $this->errorResponse($result['message'], 500);
             }
 
-            return $this->successResponse([
-                'order_id' => $result['data']['order_id'],
-                'amount' => $result['data']['amount'],
-                'status' => $result['data']['status']
-            ], 'Amount added successfully', 200); 
+            if (config('midtrans.use')) {
+                $response = [
+                    'order_id' => $result['data']['order_id'],
+                    'amount' => $result['data']['amount'],
+                    'status' => $result['data']['status'],
+                    'snap_token' => $snapToken,
+                    'redirect_url' => config('midtrans.is_production') ? config('midtrans.url') . $snapToken : config('midtrans.sandbox_url') . $snapToken
+                ];
+            } else {
+                $response = [
+                    'order_id' => $result['data']['order_id'],
+                    'amount' => $result['data']['amount'],
+                    'status' => $result['data']['status']
+                ];
+            }
+
+            return $this->successResponse($response, 'Payment link generated successfully', 200);
+
         } catch (\Illuminate\Validation\ValidationException $e) {
             return $this->errorResponse($e->validator->errors()->first(), 422);
         } catch (\Exception $e) {
-            Log::error('Error adding amount: ' . $e->getMessage());
-            return $this->errorResponse('Failed to add amount', 500);
+            Log::error('Error creating payment: ' . $e->getMessage());
+            return $this->errorResponse('Failed to create payment', 500);
         }
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/deposit/callback",
+     *     tags={"Deposit"},
+     *     summary="Midtrans payment callback",
+     *     description="Handle Midtrans payment notification",
+     *     @OA\RequestBody(
+     *         required=true,
+     *         description="Midtrans notification payload"
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Callback processed successfully"
+     *     )
+     * )
+     */
+    public function callback(Request $request)
+    {
+        try {
+            if (!config('midtrans.use')) {
+                return $this->errorResponse('Midtrans is not enabled', 404);
+            }
+
+            // Verifikasi signature
+            $notification = new \Midtrans\Notification();
+            
+            // Tambahkan validasi signature
+            $signatureKey = $notification->signature_key;
+            $orderId = $notification->order_id;
+            $statusCode = $notification->status_code;
+            $grossAmount = $notification->gross_amount;
+            $serverKey = config('midtrans.server_key');
+            
+            $validSignatureKey = hash('sha512', $orderId . $statusCode . $grossAmount . $serverKey);
+            
+            if ($signatureKey !== $validSignatureKey) {
+                return $this->errorResponse('Invalid signature', 400);
+            }
+
+            $status = $this->determineTransactionStatus(
+                $notification->transaction_status,
+                $notification->payment_type,
+                $notification->fraud_status
+            );
+
+            $result = $this->TransactionRepository->updateTransactionStatus($orderId, $status);
+            
+            if (!$result['success']) {
+                throw new \Exception($result['message']);
+            }
+
+            return $this->successResponse(null, 'Callback processed successfully', 200);
+        } catch (\Exception $e) {
+            Log::error('Callback error: ' . $e->getMessage());
+            return $this->errorResponse('Failed to process callback', 500);
+        }
+    }
+
+    private function prepareMidtransParameters(Request $request)
+    {
+        return [
+            'transaction_details' => [
+                'order_id' => $request->order_id,
+                'gross_amount' => (int) $request->amount, // Pastikan integer
+            ],
+            'customer_details' => [
+                'first_name' => config('app.token_name'),
+                'email' => config('app.email'),
+            ],
+            'expiry' => [
+                'start_time' => $request->timestamp,
+                'duration' => 24,
+                'unit' => 'hours',
+            ],
+        ];
+    }
+
+    private function determineTransactionStatus($transaction, $type, $fraud)
+    {
+        if ($transaction == 'capture' && $type == 'credit_card') {
+            return $fraud == 'challenge' ? 'challenge' : 'success';
+        }
+        
+        $statusMap = [
+            'settlement' => 'success',
+            'pending' => 'pending',
+            'deny' => 'denied',
+            'expire' => 'expired',
+            'cancel' => 'cancelled'
+        ];
+        
+        return $statusMap[$transaction] ?? 'unknown';
     }
 }

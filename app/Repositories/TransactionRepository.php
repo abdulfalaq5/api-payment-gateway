@@ -6,7 +6,7 @@ use App\Models\DepositModel;
 use App\Models\TransactionModel;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
-use App\Helpers\NumberHelper;
+use Illuminate\Support\Facades\Log;
 
 class TransactionRepository
 {
@@ -23,40 +23,40 @@ class TransactionRepository
     const STATUS_PENDING = 1;
     const TYPE_DEPOSIT = 1;
     const TYPE_WITHDRAW = 2;
-    public function addDeposit($request)
+    public function addDeposit($request, $snapToken = null)
     {
-        DB::beginTransaction();
         try {
-            // Get or create deposit record
-            $deposit = $this->deposit->first() ?? new DepositModel();
-            $oldAmount = $deposit->amount ?? 0;
-            $deposit->amount = $oldAmount + $request->amount;
-            $deposit->save();
+            // Simpan transaksi ke database
+            $model_transaction = new TransactionModel();
+            $model_transaction->order_id = $request->order_id;
+            $model_transaction->amount = $request->amount;
+            $model_transaction->description = 'Deposit transaction';
+            $model_transaction->transaction_date = $request->timestamp;
+            $model_transaction->type_transaction = self::TYPE_DEPOSIT;
+            if ($snapToken && config('midtrans.use')) {
+                $model_transaction->snap_token = $snapToken;
+                $model_transaction->payment_status = 'pending';
+                $model_transaction->status_transaction_id = self::STATUS_PENDING;
+            } else {
+                $model_transaction->snap_token = null;
+                $model_transaction->payment_status = 'success';
+                $model_transaction->status_transaction_id = self::STATUS_SUCCESS;
+            }
+            $model_transaction->save();
 
-            // Create transaction record
-            $transaction = $this->transaction->create([
-                'amount' => $request->amount,
-                'type_transaction' => self::TYPE_DEPOSIT,
-                'status_transaction_id' => self::STATUS_SUCCESS,
-                'order_id' => $request->order_id,
-                'description' => 'Deposit transaction',
-                'transaction_date' => $request->timestamp
-            ]);
-
-            DB::commit();
             return [
                 'success' => true,
                 'data' => [
-                    'order_id' => $request->order_id,
-                    'amount' => $request->amount,
-                    'status' => self::STATUS_SUCCESS
+                    'order_id' => $model_transaction->order_id,
+                    'amount' => format_decimal($model_transaction->amount),
+                    'status' => $model_transaction->payment_status
                 ]
             ];
         } catch (\Exception $e) {
-            DB::rollback();
+            Log::error('Error in TransactionRepository@addDeposit: ' . $e->getMessage());
             return [
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => 'Failed to create transaction'
             ];
         }
     }
@@ -106,6 +106,35 @@ class TransactionRepository
             return [
                 'success' => false,
                 'message' => $e->getMessage()
+            ];
+        }
+    }
+
+    public function updateTransactionStatus($orderId, $status)
+    {
+        try {
+            $transaction = TransactionModel::where('order_id', $orderId)->firstOrFail();
+            $transaction->payment_status = $status;
+            $transaction->status_transaction_id = $status === 'success' ? self::STATUS_SUCCESS : self::STATUS_PENDING;
+            // Jika status pembayaran sukses, update saldo user
+            if ($status === 'success') {
+                $deposit = $this->deposit->first() ?? new DepositModel();
+                $oldAmount = $deposit->amount ?? 0;
+                $deposit->amount = $oldAmount + $transaction->amount;
+                $deposit->save();
+            }
+            
+            $transaction->save();
+            
+            return [
+                'success' => true,
+                'message' => 'Transaction status updated successfully'
+            ];
+        } catch (\Exception $e) {
+            Log::error('Error in TransactionRepository@updateTransactionStatus: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Failed to update transaction status'
             ];
         }
     }

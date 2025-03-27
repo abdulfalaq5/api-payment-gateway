@@ -358,6 +358,25 @@
                 ]
             }
         },
+        "/api/deposit/callback": {
+            "post": {
+                "tags": [
+                    "Deposit"
+                ],
+                "summary": "Midtrans payment callback",
+                "description": "Handle Midtrans payment notification",
+                "operationId": "cb42e60be35bb92fe0a384838591d3a5",
+                "requestBody": {
+                    "description": "Midtrans notification payload",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Callback processed successfully"
+                    }
+                }
+            }
+        },
         "/api/withdrawal": {
             "post": {
                 "tags": [

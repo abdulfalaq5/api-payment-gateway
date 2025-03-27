@@ -15,6 +15,7 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
     'token_name' => env('TOKEN_NAME', 'nur muhammad abdul falaq'),
+    'email' => env('TOKEN_EMAIL', 'muhammadabdulfalaqnur@gmail.com'),
 
     /*
     |--------------------------------------------------------------------------

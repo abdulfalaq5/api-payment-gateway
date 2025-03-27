@@ -23,6 +23,7 @@ Route::middleware(['web'])->prefix('api')->group(function () {
      */
     Route::middleware('name.token')->group(function () {
         Route::apiResource('deposit', DepositController::class);
+        Route::post('deposit/callback', [DepositController::class, 'callback']);
         Route::apiResource('withdrawal', WithdrawalController::class);
     });
     // Admin routes
