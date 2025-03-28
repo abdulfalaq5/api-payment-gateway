@@ -145,3 +145,37 @@ Endpoint callback Midtrans:
 - Backup database secara berkala
 - Gunakan mode sandbox Midtrans untuk testing
 - Simpan kredensial Midtrans dengan aman
+
+## Cara jalankan unit testing
+1. Pastikan database testing sudah dibuat:
+   ```env
+   DB_DATABASE_TESTING=api_payment_gateway_laravel_testing
+   ```
+
+2. Jalankan perintah untuk menjalankan semua test:
+   ```bash
+   php artisan test
+   ```
+
+3. Untuk menjalankan test spesifik:
+   ```bash
+   php artisan test --filter=NamaTestClass
+   ```
+
+4. Untuk melihat coverage test (memerlukan Xdebug):
+   ```bash
+   php artisan test --coverage
+   ```
+
+### Test yang Tersedia
+- `DepositTest`: Pengujian fitur deposit
+- `WithdrawalTest`: Pengujian fitur penarikan
+- `AdminAuthTest`: Pengujian autentikasi admin
+- `TransactionTest`: Pengujian transaksi
+
+### Catatan Penting Testing
+- Pastikan environment testing terpisah dari production
+- Database testing akan di-reset setiap menjalankan test
+- Gunakan data faker untuk test data
+- Midtrans dalam mode sandbox untuk testing
+
