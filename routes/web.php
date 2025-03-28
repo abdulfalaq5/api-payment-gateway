@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DepositController;
 use App\Http\Controllers\WithdrawalController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\TransactionController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -28,6 +29,7 @@ Route::middleware(['web'])->prefix('api')->group(function () {
         Route::apiResource('deposit', DepositController::class);
         Route::post('deposit/manual', [DepositController::class, 'storeManual']);
         Route::apiResource('withdrawal', WithdrawalController::class);
+        Route::apiResource('transaction', TransactionController::class);
     });
     // Admin routes
     Route::prefix('admin')->group(function () {

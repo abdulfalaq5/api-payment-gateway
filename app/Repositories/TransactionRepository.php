@@ -7,11 +7,27 @@ use App\Models\TransactionModel;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 
 class TransactionRepository
 {
     protected $deposit;
     protected $transaction;
+
+    private const VALID_TYPES = ['deposit', 'withdrawal'];
+    private const VALID_FILTERS = ['day', 'month', 'year'];
+
+    /**
+     * Columns to select from transactions table
+     */
+    private const TRANSACTION_COLUMNS = [
+        'type_transaction',
+        'amount',
+        'transaction_date',
+        'status_transaction_id',
+        'description',
+        'created_at'
+    ];
 
     public function __construct(DepositModel $deposit, TransactionModel $transaction)
     {
@@ -179,6 +195,107 @@ class TransactionRepository
                 'success' => false,
                 'message' => 'Failed to update transaction status'
             ];
+        }
+    }
+
+    /**
+     * Get transaction history with optional type and time filter
+     *
+     * @param string|null $type Transaction type (deposit/withdrawal)
+     * @param string|null $filter Time filter (day/month/year)
+     * @param int|null $perPage Number of items per page
+     * @param int|null $page Current page number
+     * @return array{success: bool, data?: array, pagination?: array, message?: string}
+     */
+    public function getTransactionHistory(
+        ?string $type = null,
+        ?string $filter = null,
+        ?int $perPage = 15,
+        ?int $page = 1
+    ): array {
+        try {
+            // Validate type
+            if ($type && !in_array($type, self::VALID_TYPES)) {
+                return [
+                    'success' => false,
+                    'message' => 'Invalid transaction type'
+                ];
+            }
+
+            // Validate filter
+            if ($filter && !in_array($filter, self::VALID_FILTERS)) {
+                return [
+                    'success' => false,
+                    'message' => 'Invalid filter type'
+                ];
+            }
+
+            $query = TransactionModel::select(self::TRANSACTION_COLUMNS)
+                ->with(['statusTransaction' => function($query) {
+                    $query->select('id', 'name'); // Select hanya kolom yang diperlukan dari relasi
+                }]);
+
+            // Filter berdasarkan tipe transaksi
+            if ($type) {
+                $type = $type == 'deposit' ? self::TYPE_DEPOSIT : self::TYPE_WITHDRAW;
+                $query->where('type_transaction', $type);
+            }
+
+            // Filter berdasarkan waktu
+            if ($filter) {
+                $this->applyTimeFilter($query, $filter);
+            }
+
+            $transactions = $query->orderBy('transaction_date', 'desc')
+                                ->paginate($perPage, ['*'], 'page', $page);
+
+            return [
+                'success' => true,
+                'data' => $transactions->through(function ($transaction) {
+                    return [
+                        'transaction_date' => $transaction->transaction_date,
+                        'type' => $transaction->type_transaction == self::TYPE_DEPOSIT ? 'Deposit' : 'Withdrawal',
+                        'amount' => $transaction->amount,
+                        'status' => $transaction->statusTransaction->name,
+                        'description' => $transaction->description
+                    ];
+                }),
+                'pagination' => [
+                    'current_page' => $transactions->currentPage(),
+                    'per_page' => $transactions->perPage(),
+                    'total' => $transactions->total(),
+                    'last_page' => $transactions->lastPage()
+                ]
+            ];
+
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'message' => 'Failed to fetch transaction history: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Apply time filter to the query
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param string $filter
+     * @return void
+     */
+    private function applyTimeFilter($query, string $filter): void
+    {
+        switch ($filter) {
+            case 'day':
+                $query->whereDate('transaction_date', Carbon::today());
+                break;
+            case 'month':
+                $query->whereMonth('transaction_date', Carbon::now()->month)
+                      ->whereYear('transaction_date', Carbon::now()->year);
+                break;
+            case 'year':
+                $query->whereYear('transaction_date', Carbon::now()->year);
+                break;
         }
     }
 } 
