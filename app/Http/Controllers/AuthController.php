@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Tymon\JWTAuth\Exceptions\JWTException;
+use Illuminate\Support\Facades\Config;
 
 /**
  * @OA\Tag(
@@ -48,26 +49,20 @@ class AuthController extends Controller
     public function login()
     {
         try {
-            $token = base64_encode(config('app.token_name') . '_' . time());
+            $tokenName = Config::get('app.token_name');
+            if (empty($tokenName)) {
+                throw new \Exception('Token name not configured');
+            }
 
-            return $this->respondWithToken($token);
+            $token = base64_encode($tokenName . '_' . time());
+
+            return response()->json([
+                'access_token' => $token,
+                'token_type' => 'bearer',
+                'expires_in' => 3600 // 1 hour in seconds
+            ]);
         } catch (\Exception $e) {
             return $this->errorResponse('Login failed', 500);
         }
-    }
-
-    /**
-     * Get the token array structure.
-     *
-     * @param  string $token
-     * @return \Illuminate\Http\JsonResponse
-     */
-    protected function respondWithToken($token)
-    {
-        return response()->json([
-            'access_token' => $token,
-            'token_type' => 'bearer',
-            'expires_in' => 3600 // 1 hour in seconds
-        ]);
     }
 }
