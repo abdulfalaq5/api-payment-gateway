@@ -80,6 +80,10 @@ class TransactionRepository
                 $model_transaction->snap_token = null;
                 $model_transaction->payment_status = 'success';
                 $model_transaction->status_transaction_id = self::STATUS_SUCCESS;
+                $deposit = $this->deposit->first() ?? new DepositModel();
+                $oldAmount = $deposit->amount ?? 0;
+                $deposit->amount = $oldAmount + $request->amount;
+                $deposit->save();
             }
             $model_transaction->save();
 

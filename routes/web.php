@@ -26,6 +26,7 @@ Route::middleware(['web'])->prefix('api')->group(function () {
     Route::get('deposit/transaction-status/{order_id}', [DepositController::class, 'getTransactionStatus']);
     Route::middleware('name.token')->group(function () {
         Route::apiResource('deposit', DepositController::class);
+        Route::post('deposit/manual', [DepositController::class, 'storeManual']);
         Route::apiResource('withdrawal', WithdrawalController::class);
     });
     // Admin routes

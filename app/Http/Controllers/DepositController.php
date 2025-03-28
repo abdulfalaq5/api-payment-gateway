@@ -162,6 +162,44 @@ class DepositController extends Controller
     }
 
     /**
+     * khusus untuk deposit manual
+     * untuk mengantisipasi jika ada user yang tidak mau menggunakan midtrans
+     * padahal midtrans sudah di aktifkan
+     */
+    public function storeManual(Request $request)
+    {
+        try {
+            $request->validate([
+                'order_id' => 'required|string|max:255|regex:/^[a-zA-Z0-9\-_]+$/|unique:transactions,order_id',
+                'amount' => 'required|numeric|min:0',
+                'timestamp' => 'required|date_format:Y-m-d H:i:s'
+            ]);
+            $snapToken = null;
+
+            // Simpan data transaksi
+            $result = $this->TransactionRepository->addDeposit($request, $snapToken);
+            
+            if (!$result['success']) {
+                return $this->errorResponse($result['message'], 500);
+            }
+
+            $response = [
+                'order_id' => $result['data']['order_id'],
+                'amount' => $result['data']['amount'],
+                'status' => $result['data']['status']
+                ];
+
+            return $this->successResponse($response, 'Payment link generated successfully', 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return $this->errorResponse($e->validator->errors()->first(), 422);
+        } catch (\Exception $e) {
+            Log::error('Error creating payment: ' . $e->getMessage());
+            return $this->errorResponse('Failed to create payment', 500);
+        }
+    }
+
+    /**
      * @OA\Post(
      *     path="/api/deposit/callback",
      *     tags={"Deposit"},
